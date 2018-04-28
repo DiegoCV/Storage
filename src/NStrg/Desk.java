@@ -1,4 +1,3 @@
-
 package NStrg;
 
 import NStrg.factory.Factory;
@@ -12,8 +11,8 @@ import java.util.ArrayList;
 /**
  *
  * @author Fredy Arciniegas
- * 
- * SPONSORED BY \(x.x )/ ANARCHY \( x.x)/
+ *
+ * SPONSORED BY \(x.x )/ ANARCHY \( x.x)/ 
  * Así es, ahora metemos publicidad en otros proyectos
  */
 public class Desk {
@@ -65,9 +64,8 @@ public class Desk {
         try {
             p = Desk.getBasicProducto(p);
 
-            String sql = "select i.imagen from producto p "
-                    + "inner join imagen i on p.img=i.id "
-                    + "where p.cod=´" + p.getCod() + "´";
+            String sql = "select imagen from imagen "
+                    + "where codProducto=´" + p.getCod() + "´";
             ResultSet rs = Storer.exceuteQuery(sql, con);
 
             p.setImagen(Factory.getImagen(rs.getString("imagen")));
@@ -213,25 +211,25 @@ public class Desk {
         }
         return productos;
     }
-
-    public static void insertImagen(Producto p) throws SQLException {
-        String sql = "insert into imagen (imagen) values (´" + p.getImagen().getImagen() + "´)";
-        ResultSet rs = Storer.exceuteUpdate(sql, con);
-        int idImg = rs.getInt(1);
-        sql = "insert into producto (cod,nombre,img) values (´" + p.getCod() + "´,´" + p.getNombre() + "´,´" + idImg + "´)";
-        Storer.exceuteUpdate(sql, con);
+    
+    private static void insertImagen(Producto p) throws SQLException, NullPointerException {        
+        try {
+            String sql = "insert into imagen (codProducto,imagen) values (´" + p.getCod() + "´,´" + p.getImagen().getImagen() + "´)";
+            Storer.exceuteUpdate(sql, con);
+            sql = "insert into producto (cod,nombre) values (´" + p.getCod() + "´,´" + p.getNombre() + "´)";
+            Storer.exceuteUpdate(sql, con);
+        } catch (NullPointerException ex) {
+            throw Desk.totiarNullPointer();
+        }
+        
     }
 
     /**
      * Inserta un producto con todas sus características
      *
-     * @param p Producto con {
-     *      imagen,código,nombre, listado de attbp{attb,valor},
-     *      listado de ubicaciones{
-     *          bodega,CANTIDADES CALCULADAS, listado de
-     *          attbu{attb,valor} (si no se encuentra registrado)
-     *      }
-     *  }
+     * @param p Producto con { imagen,código,nombre, listado de
+     * attbp{attb,valor}, listado de ubicaciones{ bodega,CANTIDADES CALCULADAS,
+     * listado de attbu{attb,valor} (si no se encuentra registrado) } }
      * @throws SQLException
      * @throws NullPointerException
      */
@@ -427,40 +425,47 @@ public class Desk {
         return bodegas;
     }
 
-    public static void deleteBodega(String nombre) {
-        /*
-        
-        delete from bodega where nombre=<nombre>
-        
-        por cascada:
-            bodega  ->ubicacion
-                    ->ubicacion
-                    ->valu        
-         */
+    /**
+     * Borra una bodega y sus ubicaciones a partir de un nombre de bodega
+     * @param nombre
+     * @throws SQLException
+     */
+    public static void deleteBodega(String nombre) throws SQLException {
+        String sql="Delete from bodega where nombre=´"+nombre+"´";
+        Storer.exceuteUpdate(sql, con);
     }
 
-    public static void deleteProducto(Producto p) {
-        /*
-        
-        delete from producto where cod=<p.getCod()>
-        
-        por cascada:
-            producto->imagen
-                    ->valp
-                    ->ubicacion
-                    ->valu        
-         */
+    /**
+     * Elimina un producto de la base de datos, así como sus características,imagen y ubicaciones
+     * @param p Producto con código.
+     * @throws SQLException
+     * @throws NullPointerException
+     */
+    public static void deleteProducto(Producto p) throws SQLException,NullPointerException  {
+        try{
+        String sql="delete from producto where cod=´"+p.getCod()+"´";
+        Storer.exceuteUpdate(sql, con);
+        }catch(NullPointerException ex){
+            throw Desk.totiarNullPointer();
+        }
     }
 
-    public static void deleteUbicacion(Producto p) {
-        /*
-        fore(Ubicacion u=p.getMyUbicaciones()){
-            idUbicacion=getIdUbicacion(p.getCod(),u.getBodega())
-            delete from ubicacion where id=<idUbicacion>
-        }        
-        por cascada:
-            ubicacion->valu
-         */
+    /**
+     * Borra una o más ubicaciones, así como sus características, donde se encuentre un producto.
+     * @param p Producto con ubicaciones que SE BORRARÁN.     
+     * @throws SQLException
+     * @throws NullPointerException
+     */
+    public static void deleteUbicacion(Producto p) throws SQLException,NullPointerException {
+        try{
+        for (Ubicacion u : p.getMyUbicaciones()) {
+            int idUbicacion=Desk.getIdUbicacion(p.getCod(),u.getBodega());
+            String sql="delete from ubicacion where id="+idUbicacion;
+            Storer.exceuteUpdate(sql, con);            
+        }            
+        }catch(NullPointerException ex){
+            throw Desk.totiarNullPointer();
+        }
     }
 
     private static NullPointerException totiarNullPointer() {
